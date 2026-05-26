@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1779714829454,
+      "tag": "0000_swift_ultron",
+      "breakpoints": true
+    }
+  ]
+}
