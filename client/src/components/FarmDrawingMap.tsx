@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, FeatureGroup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
 import 'leaflet-draw';
 import * as turf from '@turf/turf';
 
@@ -12,7 +14,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// A component to zoom the map to existing geojson
+// A component to zoom the map to existing geojson and fix size
 function ZoomToGeoJSON({ geometry }: { geometry: any }) {
   const map = useMap();
 
@@ -30,6 +32,17 @@ function ZoomToGeoJSON({ geometry }: { geometry: any }) {
     }
   }, [map, geometry]);
 
+  return null;
+}
+
+function InvalidateSizeComponent() {
+  const map = useMap();
+  useEffect(() => {
+    // Leaflet bug workaround: trigger resize when container mounts or resizes
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+  }, [map]);
   return null;
 }
 
@@ -65,7 +78,7 @@ function DrawControl({ readOnly, handleUpdate, featureGroupRef }: DrawControlPro
         marker: false,
         polyline: false,
         polygon: {
-          allowIntersection: false,
+          allowIntersection: true,
           showArea: true,
           shapeOptions: {
             color: '#22c55e',
@@ -101,7 +114,7 @@ function DrawControl({ readOnly, handleUpdate, featureGroupRef }: DrawControlPro
 
 interface FarmDrawingMapProps {
   initialGeometry?: GeoJSON.Geometry | null;
-  onGeometryChange: (geometry: GeoJSON.Geometry | null, areaHectares: number) => void;
+  onGeometryChange: (geometry: GeoJSON.Geometry | null, areaHectares: number, centroid?: [number, number]) => void;
   center?: [number, number];
   readOnly?: boolean;
 }
@@ -154,13 +167,16 @@ export default function FarmDrawingMap({
       const geojson = layer.toGeoJSON();
       const areaSqMeters = turf.area(geojson);
       const areaHectares = Number((areaSqMeters / 10000).toFixed(4));
+      
+      const centerF = turf.center(geojson);
+      const centroidCoords: [number, number] = [centerF.geometry.coordinates[1], centerF.geometry.coordinates[0]];
 
-      onGeometryChange(geojson.geometry, areaHectares);
+      onGeometryChange(geojson.geometry, areaHectares, centroidCoords);
     }
   };
 
   return (
-    <div className="w-full h-full min-h-[400px] z-0 relative rounded-xl overflow-hidden border border-neutral-200">
+    <div className="w-full h-full absolute inset-0 z-0 overflow-hidden">
       <MapContainer
         center={center}
         zoom={13}
@@ -175,6 +191,7 @@ export default function FarmDrawingMap({
 
         <FeatureGroup ref={featureGroupRef} />
         <DrawControl readOnly={readOnly} handleUpdate={handleUpdate} featureGroupRef={featureGroupRef} />
+        <InvalidateSizeComponent />
 
         {initialGeometry && <ZoomToGeoJSON geometry={initialGeometry} />}
       </MapContainer>

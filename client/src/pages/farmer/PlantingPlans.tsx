@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { trpc } from '../../lib/trpc';
-import { Calculator, ArrowRight, Sprout, Layers, AlertCircle, LayoutTemplate } from 'lucide-react';
+import { Calculator, ArrowRight, Sprout, Layers, AlertCircle, LayoutTemplate, X, CheckCircle, Info } from 'lucide-react';
 import { Link } from 'wouter';
 
 export default function PlantingPlans() {
   const { data: farms, isLoading } = trpc.farms.listWithDetails.useQuery();
+  const [selectedZone, setSelectedZone] = useState<any | null>(null);
 
   // For demonstration, calculate a mock average LER across all intercropped zones
   let totalLer = 0;
@@ -29,7 +30,7 @@ export default function PlantingPlans() {
       <div className="p-6 max-w-6xl mx-auto h-full flex flex-col font-inter">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-800">Planting Plans</h1>
-          <p className="text-sm text-gray-500 mt-1">AI-driven agroecological intercropping recommendations</p>
+          <p className="text-sm text-gray-500 mt-1">Rule-based agroecological intercropping recommendations</p>
         </div>
 
         {isLoading ? (
@@ -121,7 +122,7 @@ export default function PlantingPlans() {
                           </div>
                         </div>
 
-                        <button onClick={() => window.alert('Detailed plan view coming soon')} className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 py-2.5 rounded-lg text-sm font-semibold transition-colors mt-auto">
+                        <button onClick={() => setSelectedZone(zone)} className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-brand-50 hover:text-brand-700 border border-gray-200 hover:border-brand-200 text-gray-700 py-2.5 rounded-lg text-sm font-semibold transition-colors mt-auto group-hover:bg-brand-50 group-hover:text-brand-700">
                           View Detailed Plan
                           <ArrowRight className="w-4 h-4" />
                         </button>
@@ -130,6 +131,155 @@ export default function PlantingPlans() {
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* DETAILED PLAN MODAL */}
+        {selectedZone && (
+          <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 sm:p-6">
+            <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setSelectedZone(null)}></div>
+            <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto relative z-10 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+              
+              {/* Header */}
+              <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-gray-100 p-6 flex justify-between items-start z-20">
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h2 className="text-2xl font-bold text-gray-800 tracking-tight">{selectedZone.name || `Zone ${selectedZone.id}`}</h2>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${selectedZone.croppingSystem === 'intercrop' ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {selectedZone.croppingSystem}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <Layers className="w-4 h-4" /> {parseFloat(selectedZone.areaHectares || "0").toFixed(2)} Hectares 
+                    <span className="text-gray-300">|</span> 
+                    <Sprout className="w-4 h-4" /> {selectedZone.prdpLabel || "Mixed Planting"}
+                  </p>
+                </div>
+                <button onClick={() => setSelectedZone(null)} className="p-2 bg-gray-50 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-400 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-8">
+                
+                {/* LER Breakdown */}
+                <div>
+                  <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-4">
+                    <Calculator className="w-5 h-5 text-brand-500" />
+                    Land Equivalent Ratio (LER) Breakdown
+                  </h3>
+                  <div className="bg-brand-50 border border-brand-100 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                    <div className="text-center sm:text-left">
+                      <div className="text-4xl font-black text-brand-600 leading-none">{selectedZone.croppingSystem === 'intercrop' ? "1.45" : "1.00"}</div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-brand-400 mt-1">Total LER</div>
+                    </div>
+                    <div className="flex-1 space-y-2 w-full">
+                      {selectedZone.croppingSystem === 'intercrop' ? (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium text-gray-600">Primary Crop Yield (Expected)</span>
+                            <span className="font-bold text-gray-800">0.85 LER</span>
+                          </div>
+                          <div className="w-full bg-brand-200 rounded-full h-1.5"><div className="bg-brand-500 h-1.5 rounded-full w-[85%]"></div></div>
+                          
+                          <div className="flex justify-between text-sm pt-2">
+                            <span className="font-medium text-gray-600">Secondary Crop Yield (Expected)</span>
+                            <span className="font-bold text-gray-800">0.60 LER</span>
+                          </div>
+                          <div className="w-full bg-blue-200 rounded-full h-1.5"><div className="bg-blue-500 h-1.5 rounded-full w-[60%]"></div></div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-600">Monocrop systems have a baseline LER of 1.00. No intercropping synergies detected.</div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3 flex gap-1.5 items-start">
+                    <Info className="w-4 h-4 shrink-0" />
+                    This implies that planting this combination yields {selectedZone.croppingSystem === 'intercrop' ? "45% more" : "the exact baseline"} than planting them separately on the same amount of land, based on PRDP research metrics.
+                  </p>
+                </div>
+
+                {/* Spatial Layout */}
+                <div>
+                  <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-4">
+                    <LayoutTemplate className="w-5 h-5 text-blue-500" />
+                    Spatial Layout Suggestion
+                  </h3>
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="bg-gray-50 p-4 border-b border-gray-200 text-sm font-medium text-gray-700">
+                      Recommended Row Spacing & Orientation
+                    </div>
+                    <div className="p-6">
+                      {selectedZone.croppingSystem === 'intercrop' ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="h-4 w-full bg-brand-500 rounded-sm relative">
+                            <span className="absolute -top-5 left-2 text-[10px] font-bold text-gray-500 uppercase">Primary Row (e.g. 1m apart)</span>
+                          </div>
+                          <div className="h-2 w-full bg-blue-400 rounded-sm ml-4 border-l-2 border-white">
+                            <span className="absolute -left-12 text-[10px] font-bold text-gray-500 uppercase">+0.5m</span>
+                          </div>
+                          <div className="h-4 w-full bg-brand-500 rounded-sm"></div>
+                          <div className="h-2 w-full bg-blue-400 rounded-sm ml-4 border-l-2 border-white"></div>
+                          <div className="h-4 w-full bg-brand-500 rounded-sm"></div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          <div className="h-4 w-full bg-brand-500 rounded-sm"></div>
+                          <div className="h-4 w-full bg-brand-500 rounded-sm"></div>
+                          <div className="h-4 w-full bg-brand-500 rounded-sm"></div>
+                        </div>
+                      )}
+                      <div className="mt-6 grid grid-cols-2 gap-4">
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Sunlight Orientation</p>
+                          <p className="text-sm font-bold text-gray-800">East-West Rows</p>
+                        </div>
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Water Requirement</p>
+                          <p className="text-sm font-bold text-gray-800">Shared Irrigation</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Companion Logic */}
+                {selectedZone.croppingSystem === 'intercrop' && (
+                  <div>
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-4">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      Rule-based Companion Logic
+                    </h3>
+                    <ul className="space-y-3">
+                      <li className="flex gap-3 bg-green-50/50 p-3 rounded-xl border border-green-100">
+                        <div className="mt-0.5"><CheckCircle className="w-4 h-4 text-green-500" /></div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">Pest Deterrence</p>
+                          <p className="text-xs text-gray-600 mt-0.5">The secondary crop acts as a natural repellent against common aphids that target the primary crop.</p>
+                        </div>
+                      </li>
+                      <li className="flex gap-3 bg-green-50/50 p-3 rounded-xl border border-green-100">
+                        <div className="mt-0.5"><CheckCircle className="w-4 h-4 text-green-500" /></div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">Nutrient Sharing</p>
+                          <p className="text-xs text-gray-600 mt-0.5">Complementary root depths prevent competition for topsoil nutrients.</p>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+
+              </div>
+              
+              {/* Footer */}
+              <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 px-6 flex justify-end z-20">
+                <button onClick={() => setSelectedZone(null)} className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg text-sm transition-colors">
+                  Close Plan
+                </button>
+              </div>
+
             </div>
           </div>
         )}

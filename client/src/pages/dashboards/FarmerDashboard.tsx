@@ -18,6 +18,53 @@ export default function FarmerDashboard() {
   const verifiedZones = farms?.reduce((acc: number, farm: any) => acc + (farm.zones?.filter((z: any) => z.verificationStatus === 'approved').length || 0), 0) || 0;
   const pendingVerifications = farms?.reduce((acc: number, farm: any) => acc + (farm.zones?.filter((z: any) => z.verificationStatus === 'pending').length || 0), 0) || 0;
 
+  // Generate Activity Feed
+  const activities: any[] = [];
+  if (farms) {
+    farms.forEach((farm: any) => {
+      activities.push({
+        id: `farm-${farm.id}`,
+        type: 'farm_created',
+        title: 'Registered New Farm',
+        description: `${farm.name} in ${farm.municipality}`,
+        date: new Date(farm.createdAt),
+        icon: MapPin,
+        color: 'text-brand-600',
+        bg: 'bg-brand-50'
+      });
+      if (farm.zones) {
+        farm.zones.forEach((zone: any) => {
+          activities.push({
+            id: `zone-${zone.id}`,
+            type: 'zone_created',
+            title: 'Mapped New Crop Zone',
+            description: `${zone.name || `Zone ${zone.id}`} (${zone.croppingSystem})`,
+            date: new Date(zone.createdAt || farm.createdAt), // fallback if zone has no created date
+            icon: LayoutTemplate,
+            color: 'text-blue-600',
+            bg: 'bg-blue-50'
+          });
+          if (zone.verificationStatus === 'verified') {
+            activities.push({
+              id: `zone-ver-${zone.id}`,
+              type: 'zone_verified',
+              title: 'Zone Verified',
+              description: `${zone.name || `Zone ${zone.id}`} was approved by PRDP`,
+              date: new Date(zone.updatedAt || new Date()), // mock updated date
+              icon: CheckCircle,
+              color: 'text-green-600',
+              bg: 'bg-green-50'
+            });
+          }
+        });
+      }
+    });
+  }
+
+  // Sort activities newest first
+  activities.sort((a, b) => b.date.getTime() - a.date.getTime());
+  const recentActivities = activities.slice(0, 5);
+
   return (
     <DashboardLayout>
       <div className="p-6 max-w-6xl mx-auto">
@@ -115,11 +162,42 @@ export default function FarmerDashboard() {
         </div>
 
         {/* RECENT ACTIVITIES */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Recent Activities</h2>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+              <div className="w-1.5 h-5 bg-brand-500 rounded-full"></div>
+              Recent Activities
+            </h2>
+          </div>
 
-          <div className="text-center py-6 text-sm text-gray-500">
-            No recent activities.
+          <div className="p-0">
+            {recentActivities.length === 0 ? (
+              <div className="text-center py-10 text-sm font-medium text-gray-500">
+                No recent activities.
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {recentActivities.map((activity, idx) => {
+                  const Icon = activity.icon;
+                  return (
+                    <div key={activity.id} className="p-5 hover:bg-gray-50 transition-colors flex gap-4">
+                      <div className={`w-10 h-10 rounded-full ${activity.bg} flex items-center justify-center shrink-0`}>
+                        <Icon className={`w-5 h-5 ${activity.color}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="text-sm font-bold text-gray-800 truncate">{activity.title}</h4>
+                          <span className="text-xs font-semibold text-gray-400 whitespace-nowrap ml-2">
+                            {activity.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 truncate">{activity.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

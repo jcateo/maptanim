@@ -38,116 +38,140 @@ export default function FarmDetail() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/dashboard">
-            <button className="p-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 text-neutral-600 transition-colors">
+            <button className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors shadow-sm">
               <ArrowLeft className="w-5 h-5" />
             </button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold text-neutral-800">{farm.name}</h2>
-            <p className="text-sm text-neutral-500 mt-1">{farm.barangay ? `${farm.barangay}, ` : ''}{farm.municipality}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-2xl font-bold text-gray-800 tracking-tight">{farm.name}</h2>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${farm.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                {farm.status}
+              </span>
+            </div>
+            <p className="text-sm font-medium text-gray-500 flex items-center gap-1.5">
+              <MapIcon className="w-4 h-4 text-brand-500" />
+              {farm.barangay ? `${farm.barangay}, ` : ''}{farm.municipality}
+            </p>
           </div>
         </div>
         <Link href={`/farms/${farm.id}/zones/new`}>
-          <button className="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors">
+          <button className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-card transition-all transform hover:-translate-y-0.5">
             <Plus className="w-4 h-4" />
-            Add Zone
+            Add Crop Zone
           </button>
         </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 flex flex-col h-full">
           {/* MAP OVERVIEW */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-neutral-100 flex justify-between items-center">
-              <h3 className="font-semibold text-neutral-800 flex items-center gap-2">
-                <MapIcon className="w-5 h-5 text-primary-500" />
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-[500px] relative group">
+            <div className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur-md rounded-xl p-3 shadow-md border border-gray-100 pointer-events-none transition-opacity">
+              <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                <MapIcon className="w-4 h-4 text-brand-500" />
                 Farm Zones Overview
               </h3>
+              <p className="text-xs font-medium text-gray-500 mt-0.5">Interactive map view</p>
             </div>
-            <div className="h-[400px] w-full relative">
-              {/* If there are zones with geometry, we could display them all here. For now, empty or center. */}
+            
+            <div className="absolute inset-0 z-0">
+              {/* If there are zones with geometry, display them all here. For now, center on farm. */}
               <FarmDrawingMap
                 center={center}
                 readOnly={true}
                 onGeometryChange={() => { }}
-                // We could pass a FeatureCollection of all zones here
                 initialGeometry={farm.zones && farm.zones.length > 0 ? (farm.zones[0].geometry as GeoJSON.Geometry) : null}
               />
             </div>
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 flex flex-col h-full">
           {/* FARM DETAILS */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6">
-            <h3 className="font-semibold text-neutral-800 mb-4">Farm Details</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-neutral-500 text-sm">Total Area</span>
-                <span className="font-medium text-neutral-800">{farm.totalArea || 0} Hectares</span>
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-bl-full -z-0 opacity-50"></div>
+            <h3 className="font-bold text-gray-800 mb-5 relative z-10 flex items-center gap-2">
+              <div className="w-1 h-5 bg-brand-500 rounded-full"></div>
+              Farm Registration Data
+            </h3>
+            <div className="space-y-4 relative z-10">
+              <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                <span className="text-gray-500 text-sm font-medium">Total Calculated Area</span>
+                <span className="font-bold text-gray-800 bg-gray-100 px-3 py-1 rounded-lg">{farm.totalArea || 0} ha</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-neutral-500 text-sm">Status</span>
-                <span className="font-medium text-green-600 capitalize">{farm.status}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-neutral-500 text-sm">Created</span>
-                <span className="font-medium text-neutral-800">
-                  {farm.createdAt ? new Date(farm.createdAt).toLocaleDateString() : 'N/A'}
+              <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                <span className="text-gray-500 text-sm font-medium">Date Registered</span>
+                <span className="font-semibold text-gray-700">
+                  {farm.createdAt ? new Date(farm.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
                 </span>
               </div>
             </div>
           </div>
 
           {/* ZONES LIST */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6">
-            <h3 className="font-semibold text-neutral-800 mb-4">Crop Zones ({farm.zones?.length || 0})</h3>
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col flex-1 overflow-hidden">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                <div className="w-1 h-5 bg-brand-500 rounded-full"></div>
+                Crop Zones ({farm.zones?.length || 0})
+              </h3>
+            </div>
 
-            {!farm.zones || farm.zones.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-neutral-500 mb-4">No zones mapped yet.</p>
-                <Link href={`/farms/${farm.id}/zones/new`}>
-                  <button className="text-primary-600 font-medium text-sm hover:underline">
-                    Map your first zone
-                  </button>
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {farm.zones.map((zone: any) => (
-                  <div key={zone.id} className="p-3 border border-neutral-100 rounded-xl hover:border-primary-200 transition-colors">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium text-neutral-800">{zone.name || `Zone ${zone.id}`}</h4>
-                        <p className="text-xs text-neutral-500 capitalize">{zone.croppingSystem}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs font-semibold text-neutral-700 bg-neutral-100 px-2 py-1 rounded">
-                          {zone.areaHectares} ha
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex justify-between items-center">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${zone.verificationStatus === 'verified' ? 'bg-green-100 text-green-700' :
-                        zone.verificationStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                        {zone.verificationStatus}
-                      </span>
-                      <Link href={`/verify/${zone.id}`}>
-                        <button className="text-neutral-400 hover:text-primary-600">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      </Link>
-                    </div>
+            <div className="p-5 flex-1 overflow-y-auto">
+              {!farm.zones || farm.zones.length === 0 ? (
+                <div className="text-center py-10">
+                  <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <MapIcon className="w-5 h-5 text-gray-400" />
                   </div>
-                ))}
-              </div>
-            )}
+                  <p className="text-sm font-medium text-gray-500 mb-4">No crop zones mapped yet.</p>
+                  <Link href={`/farms/${farm.id}/zones/new`}>
+                    <button className="text-brand-600 font-semibold text-sm hover:text-brand-700 hover:underline">
+                      Map your first zone
+                    </button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {farm.zones.map((zone: any) => (
+                    <div key={zone.id} className="p-4 border border-gray-100 rounded-xl hover:border-brand-200 hover:shadow-card-md hover:bg-brand-50/30 transition-all group">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-bold text-gray-800 group-hover:text-brand-700 transition-colors">{zone.name || `Zone ${zone.id}`}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{zone.croppingSystem}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-bold text-brand-700 bg-brand-100 px-2.5 py-1 rounded-md shadow-sm">
+                            {Number(zone.areaHectares).toFixed(2)} ha
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex justify-between items-center border-t border-gray-100/50 pt-3">
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-2 h-2 rounded-full ${zone.verificationStatus === 'verified' ? 'bg-green-500' :
+                              zone.verificationStatus === 'pending' ? 'bg-amber-500 animate-pulse' :
+                                'bg-red-500'
+                            }`}></div>
+                          <span className="text-xs font-semibold text-gray-600 capitalize">
+                            {zone.verificationStatus}
+                          </span>
+                        </div>
+                        <Link href={`/verify/${zone.id}`}>
+                          <button className="text-gray-400 hover:text-brand-600 p-1.5 rounded-md hover:bg-brand-50 transition-colors">
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

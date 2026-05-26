@@ -19,7 +19,7 @@ export default function NewFarm() {
   const [zoneName, setZoneName] = useState("");
   const [municipality, setMunicipality] = useState("");
   const [barangay, setBarangay] = useState("");
-  const [position, setPosition] = useState<[number, number] | null>(null);
+  const [position, setPosition] = useState<[number, number]>([10.4357, 123.0000]);
   
   const [geometry, setGeometry] = useState<any>(null);
   const [areaHectares, setAreaHectares] = useState<number>(0);
@@ -35,16 +35,13 @@ export default function NewFarm() {
   const [percentage2, setPercentage2] = useState<number>(40);
 
   useEffect(() => {
-    // Initial geolocation request on mount
-    if (navigator.geolocation && !position) {
+    // Attempt geolocation on mount, but map is already rendered with default
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((pos) => {
         setPosition([pos.coords.latitude, pos.coords.longitude]);
       }, () => {
-        // Default position if denied
-        setPosition([10.4357, 123.0000]);
+        // Silently fail to default
       });
-    } else if (!position) {
-      setPosition([10.4357, 123.0000]);
     }
   }, []);
 
@@ -170,10 +167,10 @@ export default function NewFarm() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 max-w-5xl mx-auto h-full flex flex-col">
+      <div className="w-full h-full flex flex-col">
         <h1 className="text-xl font-semibold text-gray-800 mb-6 hidden">Add New Farm</h1>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col flex-1 overflow-hidden min-h-[600px]">
+        <div className="bg-white flex flex-col flex-1 overflow-hidden min-h-[calc(100vh-120px)]">
           
           {/* STEPPER TOP */}
           <div className="flex border-b border-gray-200 bg-gray-50">
@@ -182,8 +179,8 @@ export default function NewFarm() {
               const isActive = step === stepNumber;
               const isPast = step > stepNumber;
               return (
-                <div key={label} className={`flex-1 flex items-center justify-center py-4 text-sm font-medium border-b-2 transition-colors ${isActive ? 'border-brand-500 text-brand-700 bg-white' : isPast ? 'border-brand-300 text-gray-700' : 'border-transparent text-gray-400'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2 transition-colors ${isActive ? 'bg-brand-500 text-white' : isPast ? 'bg-brand-100 text-brand-700' : 'bg-gray-200 text-gray-500'}`}>
+                <div key={label} className={`flex-1 flex flex-col sm:flex-row items-center justify-center py-3 sm:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors ${isActive ? 'border-brand-500 text-brand-700 bg-white' : isPast ? 'border-brand-300 text-gray-700' : 'border-transparent text-gray-400'}`}>
+                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs sm:mr-2 mb-1 sm:mb-0 transition-colors ${isActive ? 'bg-brand-500 text-white' : isPast ? 'bg-brand-100 text-brand-700' : 'bg-gray-200 text-gray-500'}`}>
                     {isPast ? <CheckCircle className="w-3.5 h-3.5" /> : stepNumber}
                   </div>
                   {label}
@@ -193,30 +190,31 @@ export default function NewFarm() {
           </div>
 
           {/* MAIN CONTENT AREA */}
-          <div className="flex-1 p-6 flex flex-col min-h-0 overflow-y-auto relative">
+          <div className="flex-1 flex flex-col min-h-0 relative">
             
             {/* STEP 1: DRAW BOUNDARY */}
-            <div className={step === 1 ? 'flex flex-col h-full' : 'hidden'}>
-              <div className="relative flex-1 rounded-2xl overflow-hidden border border-gray-200 shadow-inner">
-                {position && (
-                  <FarmDrawingMap
-                    center={position}
-                    onGeometryChange={(geom, area) => {
-                      setGeometry(geom);
-                      setAreaHectares(area);
-                    }}
-                    readOnly={false}
-                  />
-                )}
-                
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur rounded-full px-6 py-2 shadow-card z-[1000] text-sm font-medium text-gray-800 border border-gray-200">
-                  Tap points on the map to draw your field boundary.
-                </div>
+            <div className={step === 1 ? 'flex flex-col flex-1 relative min-h-[60vh]' : 'hidden'}>
+              <div className="absolute inset-0 z-0">
+                <FarmDrawingMap
+                  center={position}
+                  onGeometryChange={(geom, area, centroid) => {
+                    setGeometry(geom);
+                    setAreaHectares(area);
+                    if (centroid) {
+                      setPosition(centroid);
+                    }
+                  }}
+                  readOnly={false}
+                />
+              </div>
+              
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur rounded-full px-4 sm:px-6 py-2 shadow-md z-[400] text-xs sm:text-sm font-medium text-gray-800 border border-gray-200 w-[90%] sm:w-auto text-center pointer-events-none">
+                Tap points on the map to draw your field boundary.
               </div>
             </div>
 
             {/* STEP 2: FARM DETAILS */}
-            <div className={step === 2 ? 'block' : 'hidden'}>
+            <div className={step === 2 ? 'block p-6' : 'hidden'}>
               <div className="max-w-2xl mx-auto space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Basic Details */}
@@ -263,7 +261,7 @@ export default function NewFarm() {
                         <div>
                           <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Select Crop</label>
                           <select value={crop1} onChange={(e) => setCrop1(e.target.value)} className="w-full bg-white border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
-                            <option value="">Choose crop...</option>
+                            <option value="" disabled>Select Crop...</option>
                             {crops?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </select>
                         </div>
@@ -275,7 +273,7 @@ export default function NewFarm() {
                             <div className="flex-1">
                               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Primary Crop</label>
                               <select value={crop1} onChange={(e) => setCrop1(e.target.value)} className="w-full bg-white border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                                <option value="">Crop...</option>
+                                <option value="" disabled>Select Primary Crop...</option>
                                 {crops?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                               </select>
                             </div>
@@ -288,7 +286,7 @@ export default function NewFarm() {
                             <div className="flex-1">
                               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Secondary Crop</label>
                               <select value={crop2} onChange={(e) => setCrop2(e.target.value)} className="w-full bg-white border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                                <option value="">Crop...</option>
+                                <option value="" disabled>Select Secondary Crop...</option>
                                 {crops?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                               </select>
                             </div>
@@ -306,13 +304,14 @@ export default function NewFarm() {
                             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Season 1 Crop</label>
                             <select value={crop1} onChange={(e) => setCrop1(e.target.value)} className="w-full bg-white border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
                               <option value="">Choose crop...</option>
+                              <option value="" disabled>Select First Crop...</option>
                               {crops?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                           </div>
                           <div>
                             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Season 2 Crop</label>
                             <select value={crop2} onChange={(e) => setCrop2(e.target.value)} className="w-full bg-white border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                              <option value="">Choose crop...</option>
+                              <option value="" disabled>Select Next Crop...</option>
                               {crops?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                           </div>
@@ -342,7 +341,7 @@ export default function NewFarm() {
             </div>
 
             {/* STEP 3: REVIEW */}
-            <div className={step === 3 ? 'block' : 'hidden'}>
+            <div className={step === 3 ? 'block p-6' : 'hidden'}>
               <div className="max-w-2xl mx-auto text-center py-6">
                 <div className="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="w-8 h-8" />
