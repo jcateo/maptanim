@@ -1,0 +1,328 @@
+# MapTanim: System Architecture & Design Documentation
+
+This document provides a comprehensive breakdown of the conceptual, architectural, and system design components for **MapTanim**, a Web and Mobile-Based Geo-Mapping-Driven Inter-cropping Planning, Farm Management, and Agricultural Decision Support Platform. 
+
+---
+
+## 1. Conceptual Framework
+
+MapTanim follows an **Input-Process-Output-Feedback (IPOF)** framework, designed to transform user inputs and environmental data into actionable agroecological guidance.
+
+```mermaid
+flowchart TD
+    subgraph Inputs
+        F[Farmer Data: Zones, Crops, Tasks]
+        E[External API Data: Soil, Weather, Solar]
+    end
+    subgraph Processes
+        C[Automatic Zone Classification]
+        R[Agroecological Rule Engine Scoring]
+        S[Strategic Layout & LER Simulation]
+        G[Planting Calendar Generation]
+    end
+    subgraph Outputs
+        R1[Ranked Crop Recommendations]
+        T[Task & Planting Calendar]
+        L[Strategic Farm Layouts]
+        A[Analytics & Performance Dashboard]
+    end
+    subgraph Feedback
+        F1[Farmer Task & Growth Logs]
+        H[Actual Harvest & Yield Data]
+    end
+    
+    Inputs --> Processes
+    C --> R
+    R --> S
+    S --> G
+    Processes --> Outputs
+    Outputs --> Feedback
+    Feedback -- Refines Models --> Processes
+```
+
+---
+
+## 2. System Architecture
+
+MapTanim employs a **Client-Server Architecture** optimized for resource-constrained environments.
+
+```mermaid
+flowchart TD
+    Client[Client Tier\nProgressive Web App - Mobile/Web]
+    App[Application Tier\nRESTful API Server & Rule Engine]
+    Data[(Data Tier\nSpatial Database)]
+    API[External Data Tier\n3rd Party APIs]
+    
+    Client <-->|HTTP/JSON| App
+    App <-->|SQL/Geospatial Queries| Data
+    App <-->|REST Requests| API
+```
+
+---
+
+## 3. Hardware Architecture
+
+The hardware architecture relies on cloud-based deployment to ensure high availability and scalability, minimizing the hardware burden on end-users.
+
+```mermaid
+flowchart LR
+    subgraph End-User Hardware
+        Mob[Farmer Smartphone\nGPS Enabled, Mobile Data]
+        PC[Officer/Admin PC\nDesktop Web Browser]
+    end
+    subgraph Cloud Infrastructure
+        LB[Load Balancer]
+        Web[Application Servers\nvCPU, RAM]
+        DB[(Database Server\nSSD Storage)]
+    end
+    
+    Mob --> LB
+    PC --> LB
+    LB --> Web
+    Web --> DB
+```
+
+---
+
+## 4. Software Architecture
+
+MapTanim utilizes a **Modular Monolithic** software architecture.
+
+```mermaid
+flowchart TD
+    subgraph Frontend PWA
+        UI[User Interface / React]
+        SW[Service Worker / Cache]
+        MapFront[Web Map Interface]
+    end
+    subgraph Backend Server
+        API[REST API Controllers]
+        Logic[Business Logic & Rule Engine]
+        MapBack[Spatial Processors]
+        ORM[Database Connector]
+    end
+    
+    UI --> SW
+    UI --> MapFront
+    SW <-->|Sync| API
+    MapFront <--> API
+    API --> Logic
+    Logic --> MapBack
+    Logic --> ORM
+```
+
+---
+
+## 5. Network Architecture
+
+The network architecture is designed for security and reliability over varying connection qualities (3G/4G/Wi-Fi).
+
+```mermaid
+flowchart LR
+    Client((Client Devices)) -- HTTPS/WSS --> FW[Firewall]
+    FW --> LB[Cloud Load Balancer]
+    LB --> App[Web/App Servers]
+    App -- Secure Internal VPC --> DB[(Spatial Database)]
+    App -- HTTPS --> Ext((External APIs))
+```
+
+---
+
+## 6. Database Architecture
+
+To accommodate the geospatial requirements of polygon zone drawing, MapTanim uses an Object-Relational Database with Spatial Extensions (e.g., PostgreSQL with PostGIS).
+
+```mermaid
+flowchart TD
+    subgraph Relational & Spatial Database
+        subgraph Spatial Data
+            Zones[(Zones / Polygons)]
+        end
+        subgraph Relational Data
+            Users[(Users / Roles)]
+            Farms[(Farms)]
+            Crops[(Crop Library / Matrices)]
+            Plans[(Plans & Tasks)]
+        end
+        Users --> Farms
+        Farms --> Zones
+        Zones --> Plans
+        Crops --> Plans
+    end
+```
+
+---
+
+## 7. Application / Module Architecture
+
+The system is compartmentalized into specific functional modules corresponding to the 15 phases.
+
+```mermaid
+flowchart TD
+    Core[MapTanim Core System]
+    Core --> Auth[Auth & Onboarding Module]
+    Core --> GIS[GIS Mapping Module]
+    Core --> Rule[Agroecological Rule Engine]
+    Core --> Farm[Farm Operations Module]
+    Core --> Anal[Analytics & LER Module]
+    Core --> Collab[Community & Collab Module]
+```
+
+---
+
+## 8. Security Architecture
+
+Security features JWT authentication, Role-Based Access Control, and encrypted data in transit and at rest.
+
+```mermaid
+flowchart TD
+    Client[Client App] -- HTTPS TLS 1.2+ --> WAF[Web Application Firewall]
+    WAF --> Auth[Authentication Service\nJWT Validation]
+    Auth --> RBAC{Role-Based Access Control}
+    RBAC -- Farmer Access --> F_API[Farmer Endpoints]
+    RBAC -- Admin Access --> A_API[Admin Endpoints]
+    RBAC -- Officer Access --> O_API[Officer Endpoints]
+    F_API --> DB[(Encrypted Database)]
+    A_API --> DB
+    O_API --> DB
+```
+
+---
+
+## 9. Integration Architecture
+
+How MapTanim connects to external scientific data sources.
+
+```mermaid
+flowchart LR
+    MapTanim[MapTanim Backend API]
+    MapTanim -- Fetch Soil Type, pH, Drainage --> SG[SoilGrids API]
+    MapTanim -- Fetch Temp, Rainfall --> OW[OpenWeatherMap API]
+    MapTanim -- Fetch Daily Sunlight Hours --> NASA[NASA POWER API]
+```
+
+---
+
+## 10. Data Flow Diagram (DFD)
+
+### Level 0: Context Diagram
+
+```mermaid
+flowchart TD
+    F[Farmer] -->|Farm Boundaries, Crop Selections, Task Data| MT(MapTanim System)
+    MT -->|Crop Plans, Calendars, Dashboards| F
+    
+    EO[Extension Officer] -->|Advisory Notes, Search Queries| MT
+    MT -->|Regional Reports, Farm Plans| EO
+    
+    A[Admin] -->|Crop DB Updates, User Management| MT
+    MT -->|System Analytics, Audit Logs| A
+    
+    MT <-->|GPS Coordinates / Data| SG[External APIs: SoilGrids, OpenWeather, NASA]
+```
+
+### Level 1: Core Processes DFD
+
+```mermaid
+flowchart TD
+    F[Farmer] -->|1. Draw Zone Polygon| P1(Process GIS Data)
+    P1 -->|Zone Coordinates| P2(Fetch Environmental Data)
+    P2 -->|Env Parameters| P3(Run Agroecological Rule Engine)
+    P3 -->|Compatibility Scores| P4(Generate Intercropping Plan)
+    P4 -->|Plan Details & Calendar| F
+    P4 -->|Store Plan| DB[(Database)]
+    A[Admin] -->|Update Crop Attributes| P5(Manage Crop Database)
+    P5 --> DB
+    DB -->|Retrieve Farm Plans| P6(Analytics & LER Engine)
+    P6 -->|Regional Metrics & Performance| EO[Extension Officer]
+```
+
+---
+
+## 11. Use Case Diagram
+
+```mermaid
+flowchart LR
+    Farmer([Farmer])
+    ExtensionOfficer([Extension Officer])
+    Admin([Administrator])
+
+    subgraph MapTanim System
+        direction TB
+        UC1(Manage Farm Profile)
+        UC2(Draw Field Zones GIS)
+        UC3(Get Intercropping Recommendations)
+        UC4(Manage Farm Tasks & Calendar)
+        UC5(Log Harvest & Yield)
+        UC6(Monitor Regional Farms)
+        UC7(Provide Advisory Notes)
+        UC8(Manage Crop Library & Rules)
+        UC9(View System Analytics)
+    end
+
+    Farmer --> UC1
+    Farmer --> UC2
+    Farmer --> UC3
+    Farmer --> UC4
+    Farmer --> UC5
+
+    ExtensionOfficer --> UC6
+    ExtensionOfficer --> UC7
+
+    Admin --> UC8
+    Admin --> UC9
+```
+
+---
+
+## 12. Entity-Relationship Diagram (ERD)
+
+```mermaid
+erDiagram
+    USER ||--o{ FARM : owns
+    USER {
+        int user_id PK
+        string full_name
+        string role "Farmer, Officer, Admin"
+    }
+    
+    FARM ||--o{ ZONE : contains
+    FARM {
+        int farm_id PK
+        string farm_name
+        float total_area
+    }
+    
+    ZONE ||--o{ PLAN : has
+    ZONE {
+        int zone_id PK
+        geometry polygon_coordinates
+        string condition_profile
+    }
+
+    CROP ||--o{ COMPANION_MATRIX : relates_to
+    CROP {
+        int crop_id PK
+        string crop_name
+        float optimal_ph
+    }
+    
+    COMPANION_MATRIX {
+        int crop_id_1 FK
+        int crop_id_2 FK
+        int compatibility_score
+    }
+
+    PLAN ||--o{ TASK : generates
+    PLAN {
+        int plan_id PK
+        float simulated_ler
+    }
+
+    TASK {
+        int task_id PK
+        string task_type
+        date due_date
+        string status
+    }
+```

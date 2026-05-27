@@ -10,15 +10,15 @@ export default function OfficerDashboard() {
   const { user } = useAuth();
   const { data: queue, isLoading } = trpc.officer.verificationQueue.useQuery();
   const { data: assignedFarmers } = trpc.officer.assignedFarmers.useQuery();
+  const { data: rawStats } = trpc.officer.getStats.useQuery();
 
   const pendingCount = queue?.length || 0;
   
-  // Mock stats since we don't have all queries yet for verified/rejected counts globally
   const stats = [
     { label: "Total Farmers", value: assignedFarmers?.length || 0, icon: Users, color: "text-brand-600", bg: "bg-brand-50" },
-    { label: "Pending Verifications", value: pendingCount, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "Verified Zones", value: 12, icon: CheckCircle, color: "text-brand-600", bg: "bg-brand-50" },
-    { label: "Rejected Zones", value: 2, icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
+    { label: "Pending Verifications", value: rawStats?.pending || 0, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Verified Zones", value: rawStats?.verified || 0, icon: CheckCircle, color: "text-brand-600", bg: "bg-brand-50" },
+    { label: "Rejected Zones", value: rawStats?.rejected || 0, icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
   ];
 
   return (
@@ -83,7 +83,7 @@ export default function OfficerDashboard() {
                 </thead>
                 <tbody>
                   {queue?.map((row) => (
-                    <tr key={row.verification.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                    <tr key={row.zone.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-800">{row.farmer.name}</div>
                         <div className="text-xs text-gray-500 mt-0.5">{row.farm.name}</div>
@@ -102,7 +102,7 @@ export default function OfficerDashboard() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5 text-gray-600">
                           <Clock className="w-3.5 h-3.5 text-gray-400" />
-                          {row.verification.createdAt ? format(new Date(row.verification.createdAt), 'MMM d, yyyy') : 'N/A'}
+                          {row.zone.createdAt ? format(new Date(row.zone.createdAt), 'MMM d, yyyy') : 'N/A'}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">

@@ -10,6 +10,7 @@ import { officerRouter } from "./routers/officer";
 import { adminRouter } from "./routers/admin";
 import { communityRouter } from "./routers/community";
 import { notificationsRouter } from "./routers/notifications";
+import { weatherRouter } from "./routers/weather";
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
@@ -26,6 +27,7 @@ export const appRouter = router({
   admin: adminRouter,
   community: communityRouter,
   notifications: notificationsRouter,
+  weather: weatherRouter,
 });
 
 export type AppRouter = typeof appRouter;

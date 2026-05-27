@@ -7,24 +7,43 @@ import { TRPCError } from "@trpc/server";
 
 export const officerRouter = router({
   verificationQueue: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "extension_officer") {
+    if (ctx.user.role !== "extension_officer" && ctx.user.role !== "admin") {
       throw new TRPCError({ code: "FORBIDDEN" });
     }
 
+    // Query zones directly to avoid "lost" zones due to missing tickets
     return db.select({
-      verification: zoneVerifications,
       zone: zones,
       farm: farms,
       farmer: users,
     })
-      .from(zoneVerifications)
-      .innerJoin(zones, eq(zoneVerifications.zoneId, zones.id))
+      .from(zones)
       .innerJoin(farms, eq(zones.farmId, farms.id))
-      .innerJoin(users, eq(zoneVerifications.farmerId, users.id))
-      .where(and(
-        eq(zoneVerifications.officerId, ctx.user.id),
-        eq(zoneVerifications.status, "pending")
-      ));
+      .innerJoin(users, eq(farms.userId, users.id))
+      .where(eq(zones.verificationStatus, "pending")); // Removed strict municipality filter for demo
+  }),
+
+  getStats: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== "extension_officer" && ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+
+    const allZones = await db.select({
+      verificationStatus: zones.verificationStatus
+    })
+    .from(zones)
+    .innerJoin(farms, eq(zones.farmId, farms.id))
+    .innerJoin(users, eq(farms.userId, users.id)); // Removed strict municipality filter for demo
+
+    const pending = allZones.filter(z => z.verificationStatus === "pending").length;
+    const verified = allZones.filter(z => z.verificationStatus === "verified").length;
+    const rejected = allZones.filter(z => z.verificationStatus === "needs_correction").length;
+
+    return {
+      pending,
+      verified,
+      rejected
+    };
   }),
 
   verifyZone: protectedProcedure
@@ -34,18 +53,9 @@ export const officerRouter = router({
       correctionNotes: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      if (ctx.user.role !== "extension_officer") {
+      if (ctx.user.role !== "extension_officer" && ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
-
-      const verification = await db.query.zoneVerifications.findFirst({
-        where: and(
-          eq(zoneVerifications.zoneId, input.zoneId),
-          eq(zoneVerifications.officerId, ctx.user.id)
-        ),
-      });
-
-      if (!verification) throw new TRPCError({ code: "NOT_FOUND" });
 
       const newStatus = input.action === "approve" ? "verified" : "needs_correction";
       const verifStatus = input.action === "approve" ? "approved" : "needs_correction";
@@ -54,19 +64,41 @@ export const officerRouter = router({
         where: eq(zones.id, input.zoneId),
       });
 
+      if (!zone) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const farm = await db.query.farms.findFirst({
+        where: eq(farms.id, zone.farmId),
+      });
+
       // Update zone status
       await db.update(zones)
         .set({ verificationStatus: newStatus })
         .where(eq(zones.id, input.zoneId));
 
-      // Update verification record
-      await db.update(zoneVerifications)
-        .set({
+      // Check if ticket exists, if not, create it for the audit trail
+      const existingVerification = await db.query.zoneVerifications.findFirst({
+        where: eq(zoneVerifications.zoneId, input.zoneId)
+      });
+
+      if (existingVerification) {
+        await db.update(zoneVerifications)
+          .set({
+            status: verifStatus,
+            correctionNotes: input.correctionNotes,
+            verifiedAt: new Date(),
+            officerId: ctx.user.id
+          })
+          .where(eq(zoneVerifications.id, existingVerification.id));
+      } else {
+        await db.insert(zoneVerifications).values({
+          zoneId: input.zoneId,
+          officerId: ctx.user.id,
+          farmerId: farm?.userId || 0,
           status: verifStatus,
           correctionNotes: input.correctionNotes,
-          verifiedAt: new Date(),
-        })
-        .where(eq(zoneVerifications.id, verification.id));
+          verifiedAt: new Date()
+        });
+      }
 
       // Create notification for farmer
       const title = input.action === "approve" ? "Zone Verified" : "Correction Requested";
@@ -75,7 +107,7 @@ export const officerRouter = router({
         : `Correction requested for your zone: ${input.correctionNotes}`;
 
       await db.insert(notifications).values({
-        userId: verification.farmerId,
+        userId: farm?.userId || 0,
         title,
         body,
         link: zone ? `/farms/${zone.farmId}` : `/dashboard`,

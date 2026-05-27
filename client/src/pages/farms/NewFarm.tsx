@@ -250,22 +250,12 @@ export default function NewFarm() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Cropping System</label>
                       <select value={croppingSystem} onChange={e => setCroppingSystem(e.target.value)} className="w-full bg-white border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
-                        <option value="monocrop">Monocrop (Single Crop)</option>
                         <option value="intercrop">Intercrop (Mixed Planting)</option>
-                        <option value="rotation">Rotation Crop</option>
                       </select>
                     </div>
 
                     <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                      {croppingSystem === 'monocrop' && (
-                        <div>
-                          <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Select Crop</label>
-                          <select value={crop1} onChange={(e) => setCrop1(e.target.value)} className="w-full bg-white border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
-                            <option value="" disabled>Select Crop...</option>
-                            {crops?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                          </select>
-                        </div>
-                      )}
+
                       
                       {croppingSystem === 'intercrop' && (
                         <>
@@ -298,25 +288,6 @@ export default function NewFarm() {
                         </>
                       )}
 
-                      {croppingSystem === 'rotation' && (
-                        <>
-                          <div>
-                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Season 1 Crop</label>
-                            <select value={crop1} onChange={(e) => setCrop1(e.target.value)} className="w-full bg-white border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                              <option value="">Choose crop...</option>
-                              <option value="" disabled>Select First Crop...</option>
-                              {crops?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Season 2 Crop</label>
-                            <select value={crop2} onChange={(e) => setCrop2(e.target.value)} className="w-full bg-white border border-gray-300 text-gray-800 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                              <option value="" disabled>Select Next Crop...</option>
-                              {crops?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                          </div>
-                        </>
-                      )}
 
                       {prdpLabel && (
                         <div className="bg-brand-100 text-brand-800 text-xs font-semibold px-2 py-1.5 rounded mt-2 flex items-center gap-2 border border-brand-200">

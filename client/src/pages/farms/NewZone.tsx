@@ -18,7 +18,7 @@ export default function NewZone() {
   const { data: crops } = trpc.crops.list.useQuery();
 
   const [name, setName] = useState("");
-  const [croppingSystem, setCroppingSystem] = useState<"monocrop" | "intercrop" | "rotation">("monocrop");
+  const [croppingSystem, setCroppingSystem] = useState<"monocrop" | "intercrop" | "rotation">("intercrop");
   const [geometry, setGeometry] = useState<any>(null);
   const [areaHectares, setAreaHectares] = useState(0);
 
@@ -29,8 +29,8 @@ export default function NewZone() {
 
   const createZoneMutation = trpc.zones.create.useMutation({
     onSuccess: () => {
-      toast.success("Zone created successfully! Sent for verification.");
-      setLocation(`/farms/${farmId}`);
+      toast.success("Zone analyzed! Soil profile generated. Redirecting to Planting Plans...", { duration: 4000 });
+      setLocation(`/planting-plans`);
     },
     onError: (err) => {
       toast.error(err.message || "Failed to create zone");
@@ -167,9 +167,7 @@ export default function NewZone() {
                     onChange={(e) => setCroppingSystem(e.target.value as "monocrop" | "intercrop" | "rotation")}
                     className="w-full bg-neutral-50 border border-neutral-200 text-neutral-800 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 outline-none"
                   >
-                    <option value="monocrop">Monocrop (Isang uri ng pananim lang)</option>
                     <option value="intercrop">Intercrop (Higit sa isang pananim nang sabay)</option>
-                    <option value="rotation">Rotation Crop (Nagpapalit ng pananim kada season)</option>
                   </select>
                 </div>
 
@@ -239,9 +237,9 @@ export default function NewZone() {
                 <span className="text-primary-700 font-bold">i</span>
               </div>
               <div>
-                <h4 className="text-sm font-bold text-primary-900">Mahalagang Paalala</h4>
+                <h4 className="text-sm font-bold text-primary-900">Next Step: Soil & Rule Engine Analysis</h4>
                 <p className="text-xs text-primary-700 mt-1 leading-relaxed">
-                  Ang lahat ng zones na iginuhit ay dadaan muna sa masusing pag-verify ng nakatalagang DA Extension Officer bago ma-aprubahan. Siguraduhing tama ang pagkakaguhit ng boundary.
+                  Upon saving, the system will automatically analyze the soil and topography of this polygon and generate compatible Planting Plans based on our agroecological algorithms.
                 </p>
               </div>
             </div>
@@ -253,7 +251,7 @@ export default function NewZone() {
                 className="w-full md:w-auto px-8 py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white rounded-xl font-semibold shadow-md flex items-center justify-center gap-2 transition-colors"
               >
                 {createZoneMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                I-submit sa Officer
+                Analyze Soil & Save Zone
               </button>
             </div>
           </div>

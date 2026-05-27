@@ -2,15 +2,46 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { LayoutTemplate, Save, GripVertical, Trash2, MapPin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLocation } from 'wouter';
 import { trpc } from '../../lib/trpc';
+import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
+import L from 'leaflet';
+
+function MapUpdater({ geometry }: { geometry: any }) {
+  const map = useMap();
+  useEffect(() => {
+    if (geometry && geometry.coordinates && geometry.coordinates.length > 0) {
+       try {
+         // GeoJSON polygon coordinates are typically [[[lng, lat], [lng, lat]...]]
+         const coords = geometry.type === 'Polygon' ? geometry.coordinates[0] : geometry.coordinates[0][0];
+         if (coords) {
+            const latLngs = coords.map((c: any) => [c[1], c[0]]);
+            map.fitBounds(latLngs, { padding: [20, 20] });
+         }
+       } catch (e) {
+         console.error("Failed to fit bounds", e);
+       }
+    }
+  }, [geometry, map]);
+  return null;
+}
+
+const EMOJI_MAP: Record<string, string> = {
+  'Kamatis': '🍅',
+  'Talong': '🍆',
+  'Kalabasa': '🎃',
+  'Ampalaya': '🥒',
+  'Sitaw': '🫘',
+  'Letsugas': '🥬',
+  'Pechay': '🥬',
+  'Okra': '🌶️',
+  'Sibuyas': '🧅',
+  'Bawang': '🧄',
+  'Siling Labuyo': '🌶️',
+};
 
 export default function LayoutBuilder() {
-  const tools = [
-    { name: 'Kamatis', emoji: '🍅', type: 'vegetable' },
-    { name: 'Talong', emoji: '🍆', type: 'vegetable' },
-    { name: 'Kalabasa', emoji: '🎃', type: 'vegetable' },
-    { name: 'Ampalaya', emoji: '🥒', type: 'vegetable' },
-    { name: 'Sitaw', emoji: '🫘', type: 'vegetable' },
+  const infrastructureTools = [
     { name: 'Irrigation Line', emoji: '💧', type: 'infrastructure' },
     { name: 'Walkway', emoji: '🛣️', type: 'infrastructure' },
   ];
@@ -22,6 +53,15 @@ export default function LayoutBuilder() {
 
   const [selectedTool, setSelectedTool] = useState<any>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<number | ''>('');
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const zId = params.get('zoneId');
+    if (zId) {
+      setSelectedZoneId(parseInt(zId));
+    }
+  }, []);
 
   const { data: farms, isLoading: isLoadingFarms } = trpc.farms.listWithDetails.useQuery();
   
@@ -35,12 +75,55 @@ export default function LayoutBuilder() {
   const createPlan = trpc.farmOps.createPlan.useMutation();
   const updatePlan = trpc.farmOps.updatePlan.useMutation();
 
+  const { data: crops } = trpc.crops.list.useQuery();
+
   const activePlan = plans?.find((p: any) => p.zoneId === selectedZoneId);
+  const activeZone = selectedFarm?.zones?.find((z: any) => z.id === selectedZoneId);
+
+  // Compute dynamic tools based on crops
+  const cropTools = (crops || []).map(c => ({
+    name: c.name,
+    emoji: EMOJI_MAP[c.name] || '🌱',
+    type: 'vegetable'
+  }));
+
+  let assignedCropNames: string[] = [];
+  if (activeZone?.prdpLabel) {
+    const base = activeZone.prdpLabel.split(' (')[0];
+    assignedCropNames = base.split('_').map((n: string) => n.trim().toLowerCase());
+  } else if (activeZone?.name) {
+    assignedCropNames = [activeZone.name.toLowerCase()];
+  }
+
+  const assignedTools = cropTools.filter(t => assignedCropNames.includes(t.name.toLowerCase()));
+  const otherTools = cropTools.filter(t => !assignedCropNames.includes(t.name.toLowerCase()));
+
+  // Parse active geometry
+  let activeGeometry = null;
+  if (activeZone?.geometry) {
+    try {
+      activeGeometry = typeof activeZone.geometry === 'string' ? JSON.parse(activeZone.geometry) : activeZone.geometry;
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
   useEffect(() => {
     if (selectedZoneId) {
       if (activePlan && activePlan.layoutConfig) {
-        setGrid(activePlan.layoutConfig as any);
+        let config = activePlan.layoutConfig;
+        if (typeof config === 'string') {
+          try {
+            config = JSON.parse(config);
+          } catch (e) {
+            console.error("Failed to parse layoutConfig:", e);
+          }
+        }
+        if (Array.isArray(config)) {
+          setGrid(config as any);
+        } else {
+          setGrid(Array(10).fill(null).map(() => Array(10).fill(null)));
+        }
       } else {
         setGrid(Array(10).fill(null).map(() => Array(10).fill(null)));
       }
@@ -88,8 +171,9 @@ export default function LayoutBuilder() {
           layoutConfig: grid
         });
       }
-      toast.success('Zone layout saved successfully!');
+      toast.success('Zone layout saved! Generating operation schedule...', { duration: 3000 });
       refetchPlans();
+      setTimeout(() => setLocation('/calendar'), 1500);
     } catch (error) {
       toast.error('Failed to save layout');
       console.error(error);
@@ -135,14 +219,14 @@ export default function LayoutBuilder() {
             <button 
               onClick={handleSave}
               disabled={!selectedZoneId || createPlan.isPending || updatePlan.isPending}
-              className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+              className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm"
             >
               {(createPlan.isPending || updatePlan.isPending) ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              Save Layout
+              Finalize Layout & Generate Schedule
             </button>
           </div>
         </div>
@@ -176,18 +260,43 @@ export default function LayoutBuilder() {
                   </div>
                 </div>
               )}
+              {/* Map Background */}
+              {selectedZoneId && activeGeometry && (
+                <div className="absolute inset-0 z-0 rounded-xl overflow-hidden pointer-events-none opacity-60">
+                   <MapContainer 
+                    center={[10.6765, 122.9509]} 
+                    zoom={16} 
+                    className="w-full h-full"
+                    zoomControl={false}
+                    dragging={false}
+                    scrollWheelZoom={false}
+                    doubleClickZoom={false}
+                  >
+                    <TileLayer
+                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                      attribution="Tiles &copy; Esri"
+                    />
+                    <Polygon 
+                      positions={activeGeometry.type === 'Polygon' ? activeGeometry.coordinates[0].map((c: any) => [c[1], c[0]]) : activeGeometry.coordinates[0][0].map((c: any) => [c[1], c[0]])}
+                      pathOptions={{ color: '#22c55e', weight: 3, fillColor: '#22c55e', fillOpacity: 0.2 }}
+                    />
+                    <MapUpdater geometry={activeGeometry} />
+                  </MapContainer>
+                </div>
+              )}
+
               <div 
-                className={`grid gap-[1px] bg-gray-200 border border-gray-300 rounded shadow-sm transition-opacity ${!selectedZoneId ? 'opacity-30' : 'opacity-100'}`}
+                className={`relative z-10 grid gap-[1px] rounded shadow-sm transition-opacity ${!selectedZoneId ? 'opacity-30' : 'opacity-100'} ${activeGeometry ? 'border-2 border-white/50 backdrop-blur-sm bg-white/20' : 'bg-gray-200 border border-gray-300'}`}
                 style={{ gridTemplateColumns: 'repeat(10, minmax(40px, 1fr))' }}
               >
-                {grid.map((row, rowIndex) => (
-                  row.map((cell, colIndex) => (
+                {Array.isArray(grid) && grid.map((row, rowIndex) => (
+                  Array.isArray(row) && row.map((cell, colIndex) => (
                     <div 
                       key={`${rowIndex}-${colIndex}`}
                       onClick={() => {
                         if (selectedZoneId) handleCellClick(rowIndex, colIndex);
                       }}
-                      className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-white ${selectedZoneId ? 'hover:bg-brand-50 cursor-pointer' : 'cursor-not-allowed'} transition-colors flex items-center justify-center text-2xl ${
+                      className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 ${activeGeometry ? (cell ? 'bg-white/80' : 'bg-white/10 hover:bg-white/30') : 'bg-white'} ${selectedZoneId ? (activeGeometry ? 'cursor-pointer' : 'hover:bg-brand-50 cursor-pointer') : 'cursor-not-allowed'} transition-colors flex items-center justify-center text-2xl ${
                         cell ? 'shadow-inner scale-[0.98]' : ''
                       }`}
                     >
@@ -217,9 +326,32 @@ export default function LayoutBuilder() {
 
               {/* Crops Category */}
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-100">Crops & Plants</h3>
+                {assignedTools.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-brand-600 mb-3 pb-2 border-b border-brand-100 flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5" /> Assigned to this Zone
+                    </h3>
+                    <div className="space-y-2">
+                      {assignedTools.map(tool => (
+                        <div 
+                          key={tool.name} 
+                          onClick={() => setSelectedTool(tool)}
+                          className={`bg-white border ${selectedTool?.name === tool.name ? 'border-brand-500 ring-1 ring-brand-500 shadow-sm bg-brand-50' : 'border-gray-200 hover:border-brand-300'} rounded-lg p-3 flex items-center gap-3 cursor-pointer transition-all`}
+                        >
+                          <GripVertical className="w-4 h-4 text-gray-300 shrink-0" />
+                          <div className="w-8 h-8 bg-gray-50 rounded flex items-center justify-center text-xl shrink-0">
+                            {tool.emoji}
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700">{tool.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-100">Other Crops & Plants</h3>
                 <div className="space-y-2">
-                  {tools.filter(t => t.type === 'vegetable').map(tool => (
+                  {otherTools.map(tool => (
                     <div 
                       key={tool.name} 
                       onClick={() => setSelectedTool(tool)}
@@ -239,11 +371,11 @@ export default function LayoutBuilder() {
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-100">Infrastructure</h3>
                 <div className="space-y-2">
-                  {tools.filter(t => t.type === 'infrastructure').map(tool => (
+                  {infrastructureTools.map(tool => (
                     <div 
                       key={tool.name} 
                       onClick={() => setSelectedTool(tool)}
-                      className={`bg-white border ${selectedTool?.name === tool.name ? 'border-sky-500 ring-1 ring-sky-500 shadow-sm bg-sky-50' : 'border-gray-200 hover:border-sky-300'} rounded-lg p-3 flex items-center gap-3 cursor-pointer transition-all`}
+                      className={`bg-white border ${selectedTool?.name === tool.name ? 'border-blue-500 ring-1 ring-blue-500 shadow-sm bg-blue-50' : 'border-gray-200 hover:border-blue-300'} rounded-lg p-3 flex items-center gap-3 cursor-pointer transition-all`}
                     >
                       <GripVertical className="w-4 h-4 text-gray-300 shrink-0" />
                       <div className="w-8 h-8 bg-sky-50 rounded flex items-center justify-center text-xl shrink-0">

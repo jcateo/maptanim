@@ -36,7 +36,7 @@ export default function Ecosystem() {
             
             <h2 className="text-3xl font-bold text-gray-900 mb-4">MapTanim Ecosystem</h2>
             <p className="text-base text-gray-600 leading-relaxed mb-8">
-              This master dashboard will synthesize data from all modules: Farm Monitoring, Community Forums, Regional Analytics, Logistics, and AI Predictions into a single, comprehensive command center.
+              This master dashboard will synthesize data from all modules: Farm Monitoring, Community Forums, Regional Analytics, Rule Engine Scoring, and Land Equivalent Ratio (LER) Simulations into a single, comprehensive command center.
             </p>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
@@ -57,8 +57,8 @@ export default function Ecosystem() {
               </div>
               <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl">
                 <Cpu className="w-6 h-6 text-indigo-500 mb-2" />
-                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Automation</h3>
-                <p className="text-[10px] text-gray-500 mt-1">Predictive AI algorithms & alerts</p>
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Rule Engine</h3>
+                <p className="text-[10px] text-gray-500 mt-1">Scientific crop compatibility scoring</p>
               </div>
             </div>
 

@@ -22,6 +22,8 @@ import Community from "./pages/community/Community";
 import NewPost from "./pages/community/NewPost";
 import Monitoring from "./pages/farmer/Monitoring";
 import PlantingPlans from "./pages/farmer/PlantingPlans";
+import PlantingCalendar from "./pages/farmer/PlantingCalendar";
+import ZoneVerifications from "./pages/officer/ZoneVerifications";
 import VerifyZone from "./pages/officer/VerifyZone";
 import ManageUsers from "./pages/admin/ManageUsers";
 import SystemHealth from "./pages/admin/SystemHealth";
@@ -31,7 +33,6 @@ import LayoutBuilder from "./pages/farmer/LayoutBuilder";
 import Research from "./pages/shared/Research";
 import Collaboration from "./pages/admin/Collaboration";
 import LandExplorer from "./pages/farmer/LandExplorer";
-import FarmOperations from "./pages/farmer/FarmOperations";
 import Reports from "./pages/shared/Reports";
 import Settings from "./pages/shared/Settings";
 import Team from "./pages/farmer/Team";
@@ -114,9 +115,11 @@ function App() {
                 <Route path="/farms/:id" component={FarmDetail} />
                 <Route path="/monitoring" component={Monitoring} />
                 <Route path="/planting-plans" component={PlantingPlans} />
+                <Route path="/calendar" component={PlantingCalendar} />
                 <Route path="/layout-builder" component={LayoutBuilder} />
 
                 {/* Officer Routes */}
+                <Route path="/verify/zones" component={ZoneVerifications} />
                 <Route path="/verify/:id" component={VerifyZone} />
 
                 {/* Admin Routes */}
@@ -135,7 +138,8 @@ function App() {
 
                 {/* Advanced Features (Phases 9-15) */}
                 <Route path="/land-explorer" component={LandExplorer} />
-                <Route path="/farm-operations" component={FarmOperations} />
+                {/* Backwards-compatible route */}
+                <Route path="/farm-operations" component={PlantingCalendar} />
                 <Route path="/reports" component={Reports} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/team" component={Team} />

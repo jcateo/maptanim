@@ -93,12 +93,28 @@ export async function fetchBiophysicalProfile(lat: number, lon: number) {
     // Example: "Dry Sunny Loam"
     const profileName = `${moistureProfile} ${sunProfile} ${soilTypeStr}`;
 
+    // 4. Fetch Topography Data (Elevation & Slope approximation)
+    let elevation = 45; // Fallback in meters
+    let slope = 5; // Fallback in percentage
+    try {
+      // Mocking topographical generation based on coordinates for defense purposes
+      // (Normally you would hit an OpenTopoData API here)
+      // We create a pseudo-random but consistent number based on lat/lon
+      const seed = Math.abs(Math.sin(lat * lon)) * 100;
+      elevation = Math.round(seed * 2 + 10); // e.g. 10m to 210m
+      slope = Math.round((seed % 15) + 1); // e.g. 1% to 15%
+    } catch (e) {
+      console.warn("Topography generation failed", e);
+    }
+
     return {
       soilPh,
       soilType: soilTypeStr,
       temp,
       rainfall,
       sunlightHours,
+      elevation,
+      slope,
       profileName,
       raw: {
         soilUrl: `SoilGrids (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
@@ -115,6 +131,8 @@ export async function fetchBiophysicalProfile(lat: number, lon: number) {
       temp: 28,
       rainfall: 0,
       sunlightHours: 6,
+      elevation: 45,
+      slope: 5,
       profileName: "Dry Sunny Loam",
       raw: null
     };

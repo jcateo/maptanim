@@ -1,9 +1,24 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
-import { Briefcase, Calendar, CheckSquare, Users, Plus, MoreVertical, Clock } from 'lucide-react';
+import { Briefcase, Calendar, CheckSquare, Users, Plus, MoreVertical, Clock, Activity } from 'lucide-react';
 import { toast } from 'sonner';
+import { trpc } from '../../lib/trpc';
 
 export default function FarmOperations() {
+  const { data: farms } = trpc.farms.list.useQuery();
+  const selectedFarmId = farms?.[0]?.id || 0;
+
+  const { data: plans } = trpc.farmOps.listPlansByFarm.useQuery(
+    { farmId: selectedFarmId },
+    { enabled: selectedFarmId > 0 }
+  );
+  
+  const activePlan = plans?.[0]; // Default to the first plan
+  
+  const { data: healthScore, isLoading: isHealthLoading } = trpc.farmOps.getPlanHealthScore.useQuery(
+    { planId: activePlan?.id || 0 },
+    { enabled: !!activePlan?.id }
+  );
   const [tasks, setTasks] = useState([
     { id: 1, title: 'Water Zone A (Kamatis)', time: '06:00 AM', status: 'completed' },
     { id: 2, title: 'Apply organic fertilizer', time: '09:00 AM', status: 'pending' },
@@ -34,6 +49,39 @@ export default function FarmOperations() {
             Phase 10: Active
           </div>
         </div>
+
+        {/* Plan Health Score Card */}
+        {activePlan && healthScore && (
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-1 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-brand-500" />
+                Plan Health Score
+              </h2>
+              <div className="flex items-baseline gap-3 mt-2">
+                <span className={`text-5xl font-bold ${healthScore.totalScore >= 80 ? 'text-emerald-500' : (healthScore.totalScore >= 50 ? 'text-amber-500' : 'text-red-500')}`}>
+                  {healthScore.totalScore}%
+                </span>
+                <span className="text-gray-600 font-medium">System Health Assessment</span>
+              </div>
+            </div>
+            
+            <div className="flex-1 grid grid-cols-3 gap-4 border-l border-gray-100 pl-6">
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Growth (50%)</p>
+                <p className="text-2xl font-semibold text-gray-800 mt-1">{healthScore.breakdown.growth}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Issues (30%)</p>
+                <p className="text-2xl font-semibold text-gray-800 mt-1">{healthScore.breakdown.issues}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Calendar (20%)</p>
+                <p className="text-2xl font-semibold text-gray-800 mt-1">{healthScore.breakdown.calendar}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 min-h-0">
           

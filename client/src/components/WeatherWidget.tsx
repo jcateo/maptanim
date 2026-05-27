@@ -2,14 +2,18 @@ import React from 'react';
 import { CloudRain, Sun, Wind } from 'lucide-react';
 import { Card } from './ui/card';
 
+import { trpc } from '../lib/trpc';
+import { Loader2 } from 'lucide-react';
+
 export default function WeatherWidget({ municipality = "Murcia" }: { municipality?: string }) {
-  // In a real implementation, this would fetch from OpenWeatherMap using the location
+  const { data: forecast, isLoading } = trpc.weather.getForecast.useQuery({});
+
   const weather = {
-    temp: 28,
-    condition: "Partly Cloudy",
-    humidity: 65,
-    wind: 12,
-    precipitation: 20
+    temp: forecast?.current?.temperature_2m || 0,
+    condition: forecast?.current?.precipitation > 0 ? "Rainy" : "Partly Cloudy",
+    humidity: forecast?.current?.relative_humidity_2m || 0,
+    wind: forecast?.current?.wind_speed_10m || 0,
+    precipitation: forecast?.current?.precipitation || 0
   };
 
   return (
@@ -29,27 +33,35 @@ export default function WeatherWidget({ municipality = "Murcia" }: { municipalit
           </div>
         </div>
 
-        <div className="flex items-end gap-3 mb-6">
-          <span className="text-4xl font-bold text-neutral-900">{weather.temp}°C</span>
-          <span className="text-sm font-medium text-neutral-500 mb-1">{weather.condition}</span>
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-end gap-3 mb-6">
+              <span className="text-4xl font-bold text-neutral-900">{weather.temp}°C</span>
+              <span className="text-sm font-medium text-neutral-500 mb-1">{weather.condition}</span>
+            </div>
 
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-sky-100/50">
-          <div className="flex items-center gap-2">
-            <CloudRain className="h-4 w-4 text-sky-500" />
-            <div className="flex flex-col">
-              <span className="text-xs text-neutral-400">Precipitation</span>
-              <span className="text-sm font-medium text-neutral-700">{weather.precipitation}%</span>
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-sky-100/50">
+              <div className="flex items-center gap-2">
+                <CloudRain className="h-4 w-4 text-sky-500" />
+                <div className="flex flex-col">
+                  <span className="text-xs text-neutral-400">Precipitation</span>
+                  <span className="text-sm font-medium text-neutral-700">{weather.precipitation} mm</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Wind className="h-4 w-4 text-sky-500" />
+                <div className="flex flex-col">
+                  <span className="text-xs text-neutral-400">Wind</span>
+                  <span className="text-sm font-medium text-neutral-700">{weather.wind} km/h</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Wind className="h-4 w-4 text-sky-500" />
-            <div className="flex flex-col">
-              <span className="text-xs text-neutral-400">Wind</span>
-              <span className="text-sm font-medium text-neutral-700">{weather.wind} km/h</span>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </Card>
   );

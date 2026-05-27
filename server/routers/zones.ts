@@ -64,6 +64,8 @@ export const zonesRouter = router({
             `Avg Temp: ${profile.temp}°C`,
             `Sunlight: ${profile.sunlightHours} hrs/day`,
             `Rainfall: ${profile.rainfall}mm/hr`,
+            `Elevation: ${profile.elevation}m`,
+            `Slope: ${profile.slope}%`,
           ].join('\\n');
 
           profileNotes = profileNotes ? `${profileDetails}\\n\\n${profileNotes}` : profileDetails;

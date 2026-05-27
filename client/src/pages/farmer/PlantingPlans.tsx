@@ -6,18 +6,43 @@ import { Link } from 'wouter';
 
 export default function PlantingPlans() {
   const { data: farms, isLoading } = trpc.farms.listWithDetails.useQuery();
+  const { data: crops } = trpc.crops.list.useQuery();
+  const { data: companions } = trpc.companion.list.useQuery();
   const [selectedZone, setSelectedZone] = useState<any | null>(null);
 
-  // For demonstration, calculate a mock average LER across all intercropped zones
+  const allZones = farms?.flatMap(farm => farm.zones || []) || [];
+
+  const getCropsFromLabel = (label: string | null) => {
+    if (!label) return [];
+    return label.split(' ')[0].split('_');
+  };
+
+  const getCompanionPair = (zone: any) => {
+    if (!crops || !companions || zone.croppingSystem !== 'intercrop') return null;
+    const cropNames = getCropsFromLabel(zone.prdpLabel);
+    if (cropNames.length !== 2) return null;
+    
+    const crop1 = crops.find((c: any) => c.name.toLowerCase() === cropNames[0].toLowerCase());
+    const crop2 = crops.find((c: any) => c.name.toLowerCase() === cropNames[1].toLowerCase());
+    if (!crop1 || !crop2) return null;
+
+    return companions.find((comp: any) => 
+      (comp.crop1Id === crop1.id && comp.crop2Id === crop2.id) ||
+      (comp.crop1Id === crop2.id && comp.crop2Id === crop1.id)
+    );
+  };
+
   let totalLer = 0;
   let intercropCount = 0;
   
-  const allZones = farms?.flatMap(farm => farm.zones || []) || [];
-
   allZones.forEach(zone => {
     if (zone.croppingSystem === 'intercrop') {
-      // Mock LER for intercrop
-      totalLer += 1.45; 
+      const pair = getCompanionPair(zone);
+      if (pair && pair.lerValue) {
+        totalLer += parseFloat(pair.lerValue);
+      } else {
+        totalLer += 1.0;
+      }
       intercropCount++;
     }
   });
@@ -94,9 +119,10 @@ export default function PlantingPlans() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {allZones.map(zone => {
+                  {allZones.map((zone: any) => {
                     const isIntercrop = zone.croppingSystem === 'intercrop';
-                    const lerScore = isIntercrop ? "1.45" : "1.00";
+                    const pair = getCompanionPair(zone);
+                    const lerScore = pair && pair.lerValue ? parseFloat(pair.lerValue).toFixed(2) : (isIntercrop ? "1.00" : "1.00");
                     const cropDisplay = zone.prdpLabel || (isIntercrop ? "Mixed Planting" : "Monocrop");
 
                     return (
@@ -109,7 +135,7 @@ export default function PlantingPlans() {
                               <span>{parseFloat(zone.areaHectares || "0").toFixed(2)} ha</span>
                             </div>
                           </div>
-                          <div className={`px-2.5 py-1 rounded-md text-xs font-bold ${isIntercrop ? 'bg-brand-100 text-brand-800' : 'bg-gray-100 text-gray-600'}`}>
+                          <div className={`px-2.5 py-1 rounded-md text-xs font-bold ${isIntercrop && lerScore !== "1.00" ? 'bg-brand-100 text-brand-800' : 'bg-gray-100 text-gray-600'}`}>
                             LER: {lerScore}
                           </div>
                         </div>
@@ -165,41 +191,55 @@ export default function PlantingPlans() {
               <div className="p-6 space-y-8">
                 
                 {/* LER Breakdown */}
-                <div>
-                  <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-4">
-                    <Calculator className="w-5 h-5 text-brand-500" />
-                    Land Equivalent Ratio (LER) Breakdown
-                  </h3>
-                  <div className="bg-brand-50 border border-brand-100 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                    <div className="text-center sm:text-left">
-                      <div className="text-4xl font-black text-brand-600 leading-none">{selectedZone.croppingSystem === 'intercrop' ? "1.45" : "1.00"}</div>
-                      <div className="text-xs font-bold uppercase tracking-wider text-brand-400 mt-1">Total LER</div>
-                    </div>
-                    <div className="flex-1 space-y-2 w-full">
-                      {selectedZone.croppingSystem === 'intercrop' ? (
-                        <>
-                          <div className="flex justify-between text-sm">
-                            <span className="font-medium text-gray-600">Primary Crop Yield (Expected)</span>
-                            <span className="font-bold text-gray-800">0.85 LER</span>
+                {(() => {
+                  const pair = getCompanionPair(selectedZone);
+                  const isIntercrop = selectedZone.croppingSystem === 'intercrop';
+                  const lerVal = isIntercrop && pair?.lerValue ? parseFloat(pair.lerValue) : 1.0;
+
+                  return (
+                    <div>
+                      <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <Calculator className="w-5 h-5 text-brand-500" />
+                        Land Equivalent Ratio (LER) Breakdown
+                      </h3>
+                      <div className="bg-brand-50 border border-brand-100 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                        <div className="text-center sm:text-left">
+                          <div className="text-4xl font-black text-brand-600 leading-none">
+                            {lerVal.toFixed(2)}
                           </div>
-                          <div className="w-full bg-brand-200 rounded-full h-1.5"><div className="bg-brand-500 h-1.5 rounded-full w-[85%]"></div></div>
-                          
-                          <div className="flex justify-between text-sm pt-2">
-                            <span className="font-medium text-gray-600">Secondary Crop Yield (Expected)</span>
-                            <span className="font-bold text-gray-800">0.60 LER</span>
-                          </div>
-                          <div className="w-full bg-blue-200 rounded-full h-1.5"><div className="bg-blue-500 h-1.5 rounded-full w-[60%]"></div></div>
-                        </>
-                      ) : (
-                        <div className="text-sm text-gray-600">Monocrop systems have a baseline LER of 1.00. No intercropping synergies detected.</div>
-                      )}
+                          <div className="text-xs font-bold uppercase tracking-wider text-brand-400 mt-1">Total LER</div>
+                        </div>
+                        <div className="flex-1 space-y-2 w-full">
+                          {isIntercrop ? (
+                            <>
+                              <div className="flex justify-between text-sm">
+                                <span className="font-medium text-gray-600">Primary Crop Yield (Expected)</span>
+                                <span className="font-bold text-gray-800">
+                                  {(lerVal * 0.58).toFixed(2)} LER
+                                </span>
+                              </div>
+                              <div className="w-full bg-brand-200 rounded-full h-1.5"><div className="bg-brand-500 h-1.5 rounded-full w-[85%]"></div></div>
+                              
+                              <div className="flex justify-between text-sm pt-2">
+                                <span className="font-medium text-gray-600">Secondary Crop Yield (Expected)</span>
+                                <span className="font-bold text-gray-800">
+                                  {(lerVal * 0.42).toFixed(2)} LER
+                                </span>
+                              </div>
+                              <div className="w-full bg-blue-200 rounded-full h-1.5"><div className="bg-blue-500 h-1.5 rounded-full w-[60%]"></div></div>
+                            </>
+                          ) : (
+                            <div className="text-sm text-gray-600">Monocrop systems have a baseline LER of 1.00. No intercropping synergies detected.</div>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-3 flex gap-1.5 items-start">
+                        <Info className="w-4 h-4 shrink-0" />
+                        This implies that planting this combination yields {isIntercrop ? "45% more" : "the exact baseline"} than planting them separately on the same amount of land, based on PRDP research metrics.
+                      </p>
                     </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-3 flex gap-1.5 items-start">
-                    <Info className="w-4 h-4 shrink-0" />
-                    This implies that planting this combination yields {selectedZone.croppingSystem === 'intercrop' ? "45% more" : "the exact baseline"} than planting them separately on the same amount of land, based on PRDP research metrics.
-                  </p>
-                </div>
+                  );
+                })()}
 
                 {/* Spatial Layout */}
                 <div>
@@ -253,20 +293,33 @@ export default function PlantingPlans() {
                       Rule-based Companion Logic
                     </h3>
                     <ul className="space-y-3">
-                      <li className="flex gap-3 bg-green-50/50 p-3 rounded-xl border border-green-100">
-                        <div className="mt-0.5"><CheckCircle className="w-4 h-4 text-green-500" /></div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800">Pest Deterrence</p>
-                          <p className="text-xs text-gray-600 mt-0.5">The secondary crop acts as a natural repellent against common aphids that target the primary crop.</p>
-                        </div>
-                      </li>
-                      <li className="flex gap-3 bg-green-50/50 p-3 rounded-xl border border-green-100">
-                        <div className="mt-0.5"><CheckCircle className="w-4 h-4 text-green-500" /></div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800">Nutrient Sharing</p>
-                          <p className="text-xs text-gray-600 mt-0.5">Complementary root depths prevent competition for topsoil nutrients.</p>
-                        </div>
-                      </li>
+                      {(() => {
+                        const pair = getCompanionPair(selectedZone);
+                        if (pair && pair.notes) {
+                          return pair.notes.split('\\n').map((note: string, idx: number) => {
+                            const [title, desc] = note.split(': ');
+                            return (
+                              <li key={idx} className="flex gap-3 bg-green-50/50 p-3 rounded-xl border border-green-100">
+                                <div className="mt-0.5"><CheckCircle className="w-4 h-4 text-green-500" /></div>
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-800">{title}</p>
+                                  <p className="text-xs text-gray-600 mt-0.5">{desc}</p>
+                                </div>
+                              </li>
+                            );
+                          });
+                        } else {
+                          return (
+                            <li className="flex gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                              <div className="mt-0.5"><Info className="w-4 h-4 text-gray-400" /></div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-800">No specific rules</p>
+                                <p className="text-xs text-gray-600 mt-0.5">No specific companion rules found in the PRDP database for this combination.</p>
+                              </div>
+                            </li>
+                          );
+                        }
+                      })()}
                     </ul>
                   </div>
                 )}
@@ -274,10 +327,16 @@ export default function PlantingPlans() {
               </div>
               
               {/* Footer */}
-              <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 px-6 flex justify-end z-20">
+              <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 px-6 flex justify-end gap-3 z-20">
                 <button onClick={() => setSelectedZone(null)} className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg text-sm transition-colors">
                   Close Plan
                 </button>
+                <Link href={`/layout-builder?zoneId=${selectedZone.id}`}>
+                  <button className="px-6 py-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4" />
+                    Accept Plan & Design Layout
+                  </button>
+                </Link>
               </div>
 
             </div>

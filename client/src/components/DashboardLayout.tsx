@@ -24,7 +24,8 @@ import {
   Globe,
   Briefcase,
   FileText,
-  Globe2
+  Globe2,
+  Calendar
 } from "lucide-react";
 import NotificationBell from "./NotificationBell"; // Assume this component will be updated separately
 
@@ -37,47 +38,31 @@ const getNavigation = (role: string): NavSection[] => {
   if (role === "farmer") {
     return [
       {
-        label: "MAIN",
+        label: "FARM MANAGEMENT",
         items: [
-          { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-          { name: "Monitoring Hub", href: "/monitoring", icon: Activity },
+          { name: "My Farms Dashboard", href: "/dashboard", icon: LayoutDashboard },
+          { name: "Farm Maps & Zones", href: "/farms/new", icon: Globe }, // Later we can unify this to a central farm list
         ],
       },
       {
-        label: "FARM TOOLS",
+        label: "DECISION SUPPORT",
         items: [
           { name: "Planting Plans", href: "/planting-plans", icon: Grid3X3 },
           { name: "Layout Builder", href: "/layout-builder", icon: LayoutTemplate },
         ],
       },
       {
-        label: "KNOWLEDGE",
+        label: "OPERATIONS",
         items: [
-          { name: "Crop Library", href: "/crops", icon: BookOpen },
-          { name: "Companion Planting", href: "/companion-planting", icon: GitMerge },
-          { name: "Research Data", href: "/research", icon: FlaskConical },
+          { name: "Calendar", href: "/calendar", icon: Calendar }, // Planting & harvest schedule
+          { name: "Monitoring Hub", href: "/monitoring", icon: Activity },
         ],
       },
       {
-        label: "COMMUNITY",
+        label: "KNOWLEDGE & SUPPORT",
         items: [
-          { name: "Community Forum", href: "/community", icon: MessageSquare },
-        ],
-      },
-      {
-        label: "ADVANCED",
-        items: [
-          { name: "Land Explorer", href: "/land-explorer", icon: Globe },
-          { name: "Farm Operations", href: "/farm-operations", icon: Briefcase },
-          { name: "Reports", href: "/reports", icon: FileText },
-        ],
-      },
-      {
-        label: "SETTINGS",
-        items: [
-          { name: "Language & Access", href: "/settings", icon: Globe2 },
-          { name: "Team", href: "/team", icon: Users },
-          { name: "Ecosystem Dashboard", href: "/ecosystem", icon: LayoutDashboard },
+          { name: "Agri-Library", href: "/crops", icon: BookOpen }, // Merges Companion Planting
+          { name: "Community Hub", href: "/community", icon: MessageSquare },
         ],
       },
     ];
@@ -86,22 +71,22 @@ const getNavigation = (role: string): NavSection[] => {
   if (role === "extension_officer") {
     return [
       {
-        label: "MAIN",
+        label: "MUNICIPALITY OVERVIEW",
         items: [
           { name: "Officer Dashboard", href: "/dashboard", icon: ClipboardCheck },
         ],
       },
       {
-        label: "KNOWLEDGE",
+        label: "VERIFICATIONS & ADVISORY",
         items: [
-          { name: "Crop Library", href: "/crops", icon: BookOpen },
-          { name: "Companion Planting", href: "/companion-planting", icon: GitMerge },
-          { name: "Research Data", href: "/research", icon: FlaskConical },
+          { name: "Zone Verifications", href: "/verify/zones", icon: Shield },
+          { name: "Plan Reviews", href: "/verify/plans", icon: FileText },
         ],
       },
       {
-        label: "COMMUNITY",
+        label: "SUPPORT TOOLS",
         items: [
+          { name: "Farmer Directory", href: "/directory", icon: Users2 },
           { name: "Community Forum", href: "/community", icon: MessageSquare },
         ],
       },
@@ -111,19 +96,17 @@ const getNavigation = (role: string): NavSection[] => {
   if (role === "admin") {
     return [
       {
-        label: "ADMINISTRATION",
+        label: "SYSTEM ADMINISTRATION",
         items: [
           { name: "System Overview", href: "/dashboard", icon: Shield },
-          { name: "Manage Users", href: "/admin/users", icon: Users },
-          { name: "Platform Analytics", href: "/admin/analytics", icon: BarChart3 },
-          { name: "System Health", href: "/admin/system", icon: Server },
+          { name: "User Management", href: "/admin/users", icon: Users },
         ],
       },
       {
-        label: "TOOLS",
+        label: "DATABASE MANAGEMENT",
         items: [
-          { name: "Collaboration", href: "/admin/collaboration", icon: Users2 },
-          { name: "Ecosystem Dashboard", href: "/ecosystem", icon: LayoutDashboard },
+          { name: "Crop Rule Engine", href: "/admin/crops", icon: FlaskConical },
+          { name: "Platform Analytics", href: "/admin/analytics", icon: BarChart3 },
         ],
       },
     ];
